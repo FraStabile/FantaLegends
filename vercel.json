@@ -1,0 +1,28 @@
+{
+  "buildCommand": "npm run build -w mobile",
+  "outputDirectory": "apps/mobile/dist",
+  "installCommand": "npm ci",
+  "env": {
+    "EXPO_PUBLIC_SERVER_URL": "@expo_public_server_url"
+  },
+  "envs": {
+    "production": {
+      "EXPO_PUBLIC_SERVER_URL": "https://asta-legends.fly.dev"
+    },
+    "preview": {
+      "EXPO_PUBLIC_SERVER_URL": "https://asta-legends.fly.dev"
+    }
+  },
+  "functions": {
+    "api/**": {
+      "memory": 1024,
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/:path*",
+      "destination": "/index.html"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+# fly.toml app configuration file generated for asta-legends
+app = "asta-legends"
+primary_region = "mxp"
+
+[build]
+dockerfile = "Dockerfile"
+
+[env]
+PORT = "8080"
+HOST = "0.0.0.0"
+CORS_ORIGIN = "*"
+PUBLIC_URL = "https://asta-legends.fly.dev/join"
+
+[http_service]
+internal_port = 8080
+force_https = true
+auto_stop_machines = true
+auto_start_machines = true
+
+[[services]]
+protocol = "tcp"
+internal_port = 8080
+
+  [[services.ports]]
+  number = 80
+  handlers = ["http"]
+  force_https = true
+
+  [[services.ports]]
+  number = 443
+  handlers = ["tls", "http"]
+
+[[mounts]]
+source = "data"
+destination = "/data"
