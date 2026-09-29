@@ -7,6 +7,7 @@ import { useSession } from '@/lib/store/session';
 import { timeAgo } from '@/lib/format';
 import { Button, Card, EmptyState, Header, Pill, Row, Screen, Section } from '@/components/ui';
 import { statusInfo } from '@/components/league/labels';
+import { ONLINE_ENABLED } from '@/lib/features';
 
 function openLeague(id: string) {
   useSession.getState().setActiveLeague(id);
@@ -23,16 +24,16 @@ export default function LeaguesTab() {
       <Header
         kicker="Asta Legends"
         title="LEGHE"
-        subtitle="Le tue sfide, online e demo"
+        subtitle={ONLINE_ENABLED ? 'Le tue sfide, online e demo' : 'Le tue sfide contro i bot'}
         right={<Button small variant="ghost" label="↻" onPress={() => void refresh()} />}
       />
 
       <Row style={{ marginTop: S.md }}>
         <Button label="Crea lega" icon="➕" variant="gold" style={{ flex: 1 }} onPress={() => router.push('/league/create')} />
-        <Button label="Entra con codice" icon="🎟️" variant="dark" style={{ flex: 1 }} onPress={() => router.push('/league/join')} />
+        {ONLINE_ENABLED ? <Button label="Entra con codice" icon="🎟️" variant="dark" style={{ flex: 1 }} onPress={() => router.push('/league/join')} /> : null}
       </Row>
 
-      {!remote ? (
+      {ONLINE_ENABLED && !remote ? (
         <Card style={styles.hint}>
           <Row gap={S.md}>
             <Text style={{ fontSize: 26 }}>📡</Text>
@@ -45,7 +46,7 @@ export default function LeaguesTab() {
         </Card>
       ) : null}
 
-      {error ? (
+      {ONLINE_ENABLED && error ? (
         <Card style={[styles.hint, { borderColor: C.red }]}>
           <Text style={[T.small, { color: C.red }]}>⚠️ Server non raggiungibile: {error}</Text>
         </Card>
@@ -55,7 +56,7 @@ export default function LeaguesTab() {
         {loading && leagues.length === 0 ? (
           <ActivityIndicator color={C.gold} style={{ marginTop: S.xl }} />
         ) : leagues.length === 0 ? (
-          <EmptyState emoji="🏟️" title="Nessuna lega, ancora" body="Crea la tua lega e invita gli amici, oppure prova subito una demo contro i bot." />
+          <EmptyState emoji="🏟️" title="Nessuna lega, ancora" body={ONLINE_ENABLED ? 'Crea la tua lega e invita gli amici, oppure prova subito una demo contro i bot.' : 'Crea la tua lega o prova subito una demo contro i bot.'} />
         ) : (
           <View style={{ gap: S.md }}>
             {leagues.map((l) => (

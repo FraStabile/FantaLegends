@@ -13,12 +13,13 @@ import { getRandomBots } from '@/lib/demo';
 import { Avatar, Button, Card, EmptyState, Header, Pill, Row, Screen, Section, TeamBadge } from '@/components/ui';
 import { statusInfo } from '@/components/league/labels';
 import { FeedPreview, PoolSummary, SettingsSummary, TeamsList, rosterValue } from '@/components/league/HubSections';
+import { ONLINE_ENABLED } from '@/lib/features';
 
 const ARCHETYPES = Object.keys(BOT_PROFILES) as BotArchetype[];
 
 function canStart(view: LeagueView): { ok: boolean; reason?: string } {
   if (view.status !== 'lobby') return { ok: false, reason: 'La lega non è in lobby' };
-  if (view.members.length < 2) return { ok: false, reason: 'Servono almeno 2 partecipanti: invita un amico o aggiungi un bot' };
+  if (view.members.length < 2) return { ok: false, reason: ONLINE_ENABLED ? 'Servono almeno 2 partecipanti: invita un amico o aggiungi un bot' : 'Servono almeno 2 partecipanti: aggiungi un bot' };
   const waiting = view.members.filter((m) => !m.isMaster && !m.ready);
   if (waiting.length) return { ok: false, reason: `In attesa che siano pronti: ${waiting.map((m) => m.displayName).join(', ')}` };
   return { ok: true };

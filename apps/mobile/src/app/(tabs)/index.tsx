@@ -3,14 +3,15 @@ import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { BOT_ARCHETYPES, BOT_PROFILES, CATALOG_COACHES, CATALOG_PLAYERS, TournamentEngine } from '@asta/core';
+import { TournamentEngine } from '@asta/core';
 import { Avatar, Button, Card, Pill, Row, Screen, Section, TeamBadge } from '@/components/ui';
 import { useSession } from '@/lib/store/session';
 import { useLeague } from '@/lib/hooks/useLeague';
-import { useMyLeagues } from '@/lib/hooks/useMyLeagues';
-import { startDemoAuction } from '@/lib/demo';
+import { useMyLeagues, type MyLeague } from '@/lib/hooks/useMyLeagues';
+import { CHALLENGES, DIFFICULTY_COLOR, startChallenge, type Challenge } from '@/lib/challenges';
 import { toast } from '@/lib/store/toasts';
 import { C, R, S, T } from '@/lib/theme';
+import { ONLINE_ENABLED } from '@/lib/features';
 
 const STATUS_IT: Record<string, string> = { lobby: 'Lobby', auction: 'Asta in corso', pre_season: 'Pre-stagione', season: 'Campionato', completed: 'Conclusa' };
 
@@ -19,19 +20,6 @@ export default function Home() {
   const avatar = useSession((s) => s.avatar);
   const activeLeagueId = useSession((s) => s.activeLeagueId);
   const { leagues } = useMyLeagues();
-  const [starting, setStarting] = useState(false);
-
-  const demo = async () => {
-    setStarting(true);
-    try {
-      const view = await startDemoAuction();
-      router.push(`/league/${view.id}/auction`);
-    } catch (e) {
-      toast.error('Impossibile avviare la demo', (e as Error).message);
-    } finally {
-      setStarting(false);
-    }
-  };
 
   return (
     <Screen>
@@ -46,26 +34,11 @@ export default function Home() {
 
       {activeLeagueId && leagues.some((l) => l.id === activeLeagueId) ? <ActiveLeague leagueId={activeLeagueId} /> : null}
 
-      <Animated.View entering={FadeInDown.duration(500)}>
-        <View style={styles.hero}>
-          <LinearGradient colors={['#3A2D08', '#101A2E']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
-          <Text style={[T.tiny, { color: C.goldBright }]}>DEMO AUCTION</Text>
-          <Text style={[T.h1, { marginTop: 4 }]}>Sfida 5 bot all'asta</Text>
-          <Text style={[T.small, { color: C.text, marginTop: 6 }]}>
-            {CATALOG_PLAYERS.length} campioni nel loro prime e {CATALOG_COACHES.length} allenatori. Nessun amico disponibile? I bot rilanciano, bluffano e strapagano.
-          </Text>
-          <Row style={{ flexWrap: 'wrap', marginTop: S.md }} gap={6}>
-            {BOT_ARCHETYPES.map((b) => (
-              <Pill key={b} label={`${BOT_PROFILES[b].emoji} ${BOT_PROFILES[b].label}`} color={C.goldBright} />
-            ))}
-          </Row>
-          <Button label="INIZIA LA DEMO" variant="gold" icon="🔨" loading={starting} onPress={demo} style={{ marginTop: S.lg }} />
-        </View>
-      </Animated.View>
+      <Challenges leagues={leagues} />
 
       <Row style={{ marginTop: S.lg }} gap={S.sm}>
         <Button label="Crea lega" icon="🏟️" variant="primary" style={{ flex: 1 }} onPress={() => router.push('/league/create')} />
-        <Button label="Entra" icon="🔑" variant="dark" style={{ flex: 1 }} onPress={() => router.push('/league/join')} />
+        {ONLINE_ENABLED ? <Button label="Entra" icon="🔑" variant="dark" style={{ flex: 1 }} onPress={() => router.push('/league/join')} /> : null}
       </Row>
 
       {leagues.length ? (
@@ -95,7 +68,7 @@ export default function Home() {
       <Section title="Come si gioca">
         <Card>
           {[
-            ['🏟️', 'Crea una lega privata', 'Scegli crediti, ruoli, formato e regole. Invita gli amici con codice, link o QR.'],
+            ['🏟️', 'Crea una lega privata', ONLINE_ENABLED ? 'Scegli crediti, ruoli, formato e regole. Invita gli amici con codice, link o QR.' : 'Scegli crediti, ruoli, formato e regole, poi sfida i bot.'],
             ['🔨', 'Asta live', 'Un campione alla volta, estratto a sorpresa. Rilancia prima che scada il timer.'],
             ['🧠', 'Strategia', 'Tieni i crediti per completare la rosa: portiere, difensore, centrocampista, attaccanti e allenatore.'],
             ['⚽', 'Partite minuto per minuto', 'Il motore simula ogni azione dalle statistiche reali. Telecronaca live, pagelle, MVP.'],
@@ -154,6 +127,81 @@ function ActiveLeague({ leagueId }: { leagueId: string }) {
       </Row>
       <Button label={cta.label} variant="gold" small style={{ marginTop: S.md }} onPress={cta.go} />
     </Card>
+  );
+}
+
+/** CHALLENGE — ready-made leagues against the bots, the quickest way into the game. */
+function Challenges({ leagues }: { leagues: MyLeague[] }) {
+  const runs = useSession((s) => s.challengeRuns);
+  const [starting, setStarting] = useState<string | null>(null);
+  const [featured, ...others] = CHALLENGES;
+
+  const stateOf = (c: Challenge) => {
+    const mine = leagues.filter((l) => runs[l.id] === c.id);
+    return { won: mine.some((l) => l.won), open: mine.find((l) => l.status !== 'completed') ?? null };
+  };
+
+  const play = async (c: Challenge) => {
+    const { open } = stateOf(c);
+    if (open) {
+      useSession.getState().setActiveLeague(open.id);
+      router.push(open.status === 'auction' ? `/league/${open.id}/auction` : `/league/${open.id}`);
+      return;
+    }
+    setStarting(c.id);
+    try {
+      const view = await startChallenge(c);
+      router.push(`/league/${view.id}/auction`);
+    } catch (e) {
+      toast.error('Impossibile avviare la challenge', (e as Error).message);
+    } finally {
+      setStarting(null);
+    }
+  };
+
+  const cta = (c: Challenge) => {
+    const { won, open } = stateOf(c);
+    return open ? 'CONTINUA' : won ? 'RIGIOCA' : 'GIOCA';
+  };
+
+  const f = stateOf(featured);
+  return (
+    <Section title="Challenge" style={{ marginTop: S.md }}>
+      <Animated.View entering={FadeInDown.duration(400)} style={styles.hero}>
+        <LinearGradient colors={['#3A2D08', '#101A2E']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+        <Row style={{ justifyContent: 'space-between' }}>
+          <Text style={[T.tiny, { color: C.goldBright }]}>⭐ PER INIZIARE</Text>
+          {f.won ? <Pill label="🏆 VINTA" color={C.goldBright} /> : <Pill label={featured.difficulty.toUpperCase()} color={DIFFICULTY_COLOR[featured.difficulty]} />}
+        </Row>
+        <Text style={[T.h1, { marginTop: 4 }]}>
+          {featured.emoji} {featured.title}
+        </Text>
+        <Text style={[T.small, { color: C.text, marginTop: 6 }]}>{featured.tagline}</Text>
+        <Text style={[T.small, { marginTop: 6 }]}>🎯 Obiettivo: vinci il campionato</Text>
+        <Button label={cta(featured)} variant="gold" icon="🔨" loading={starting === featured.id} disabled={starting !== null} onPress={() => void play(featured)} style={{ marginTop: S.lg }} />
+      </Animated.View>
+
+      <View style={{ gap: S.sm, marginTop: S.md }}>
+        {others.map((c) => {
+          const st = stateOf(c);
+          return (
+            <Card key={c.id} style={{ padding: S.md }}>
+              <Row gap={S.md}>
+                <Text style={{ fontSize: 30 }}>{c.emoji}</Text>
+                <View style={{ flex: 1 }}>
+                  <Row gap={6} style={{ flexWrap: 'wrap' }}>
+                    <Text style={T.h3}>{c.title}</Text>
+                    {st.won ? <Pill label="🏆 VINTA" color={C.goldBright} /> : <Pill label={c.difficulty.toUpperCase()} color={DIFFICULTY_COLOR[c.difficulty]} />}
+                  </Row>
+                  <Text style={[T.small, { marginTop: 2 }]}>{c.tagline}</Text>
+                </View>
+              </Row>
+              <Button small label={cta(c)} variant={st.open ? 'primary' : 'dark'} loading={starting === c.id} disabled={starting !== null} onPress={() => void play(c)} style={{ marginTop: S.md }} />
+            </Card>
+          );
+        })}
+      </View>
+    </Section>
   );
 }
 

@@ -6,6 +6,7 @@ import { Button, Card, Screen, TextField } from '@/components/ui';
 import { useSession } from '@/lib/store/session';
 import { C, R, S, T } from '@/lib/theme';
 import { AVATARS } from '@/lib/format';
+import { ONLINE_ENABLED } from '@/lib/features';
 
 
 export default function Onboarding() {
@@ -21,7 +22,7 @@ export default function Onboarding() {
         <Text style={[T.tiny, { color: C.gold, marginTop: S.md }]}>Benvenuto in</Text>
         <Text style={[T.hero, { textAlign: 'center' }]}>ASTA{'\n'}LEGENDS</Text>
         <Text style={[T.small, { textAlign: 'center', marginTop: S.md, maxWidth: 320 }]}>
-          L'asta tra amici con le leggende del calcio nel loro prime. Costruisci la squadra, sfida gli amici, scrivi la storia.
+          {ONLINE_ENABLED ? "L'asta tra amici con le leggende del calcio nel loro prime. Costruisci la squadra, sfida gli amici, scrivi la storia." : "L'asta con le leggende del calcio nel loro prime. Costruisci la squadra, sfida i rivali, scrivi la storia."}
         </Text>
       </Animated.View>
 

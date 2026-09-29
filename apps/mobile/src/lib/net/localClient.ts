@@ -79,7 +79,16 @@ export class LocalClient implements GameClient {
   async listLeagues(): Promise<LeagueSummary[]> {
     await this.loaded;
     return [...this.hosts.values()]
-      .map((h) => ({ id: h.id, name: h.state.config.name, code: h.state.code, status: h.state.status, season: h.state.season, members: h.state.members.length, updatedAt: h.state.feed[0]?.at ?? h.state.createdAt }))
+      .map((h) => ({
+        id: h.id,
+        name: h.state.config.name,
+        code: h.state.code,
+        status: h.state.status,
+        season: h.state.season,
+        members: h.state.members.length,
+        updatedAt: h.state.feed[0]?.at ?? h.state.createdAt,
+        won: wonBy(h.state, this.userId),
+      }))
       .sort((a, b) => b.updatedAt - a.updatedAt);
   }
 
@@ -135,6 +144,7 @@ export class LocalClient implements GameClient {
         case 'season:start': return host.startSeason(u);
         case 'round:play': return host.playRound(u, (p as CommandMap['round:play']).mode).map((m) => m.id);
         case 'season:new': return host.newSeason(u);
+        case 'round:finish': return host.finishLiveRound(u);
         case 'match:talk': {
           const { matchId, phrase, tone } = p as CommandMap['match:talk'];
           return host.giveTeamTalk(u, matchId, phrase, tone);
@@ -148,7 +158,8 @@ export class LocalClient implements GameClient {
 
   async getMatch(leagueId: string, matchId: string): Promise<MatchView> {
     const host = await this.host(leagueId);
-    return this.guard(() => host.matchView(matchId));
+    // single player: the whole timeline, so playback can run faster than the live clock
+    return this.guard(() => host.matchView(matchId, { revealAll: true }));
   }
 
   async getStats(leagueId: string): Promise<SeasonStatistics> {
@@ -272,4 +283,12 @@ export class LocalClient implements GameClient {
       /* corrupted storage: start fresh */
     }
   }
+}
+
+/** The user's team won the title of the current season, or of any archived one. */
+function wonBy(league: League, userId: string): boolean {
+  const teamId = league.members.find((m) => m.userId === userId)?.teamId;
+  if (!teamId) return false;
+  if (league.status === 'completed' && league.tournament?.championTeamId === teamId) return true;
+  return league.history.some((h) => h.championTeamId === teamId);
 }

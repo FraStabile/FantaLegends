@@ -95,6 +95,22 @@ describe('Demo mode: bots + full season', () => {
     expect(done.summary.homeGoals).toBe(all.homeGoals);
   });
 
+  it('demo: the whole live timeline can be watched fast, then the round is published early', () => {
+    const { host, scheduler } = playFullSeason('round_robin', 3);
+    host.startSeason(MASTER);
+    const [first] = host.playRound(MASTER, 'live');
+    scheduler.advance(KICKOFF_DELAY_MS + 5_000);
+    const all = host.allResults().find((r) => r.matchId === first.id)!;
+    const full = host.matchView(first.id, { revealAll: true });
+    expect(full.events).toHaveLength(all.events.length);
+    expect(full.final).toBeNull();
+    expect(host.matchView(first.id).events.length).toBeLessThan(all.events.length);
+    expect(() => host.finishLiveRound('u-marco')).toThrow();
+    host.finishLiveRound(MASTER);
+    expect(host.state.tournament!.matches.filter((m) => m.round === first.round).every((m) => m.status === 'finished')).toBe(true);
+    expect(host.matchView(first.id).summary.homeGoals).toBe(all.homeGoals);
+  });
+
   it('a new season keeps the history and resets rosters and credits', () => {
     const { host, scheduler } = playFullSeason('knockout', 3);
     host.startSeason(MASTER);

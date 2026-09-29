@@ -8,7 +8,7 @@ import Animated, { FadeIn, FadeInDown, FadeOut, ZoomIn } from 'react-native-rean
 import { strengthView, TALK_REACTIONS, type Catalog, type LeagueView, type MatchEvent, type MatchView, type TeamStrengthView } from '@asta/core';
 import { Button, Card, Chip, Pill, Row, Segmented, StatBar, TeamBadge } from '@/components/ui';
 import { useLeague } from '@/lib/hooks/useLeague';
-import { clientFor } from '@/lib/store/session';
+import { clientFor, isLocalLeague } from '@/lib/store/session';
 import { C, R, S, SLOT_COLORS, T } from '@/lib/theme';
 import { EVENT_ICON, SLOT_SHORT, STAGE_IT, TACTIC_IT, minuteLabel, shortName } from '@/lib/format';
 import { haptic } from '@/lib/haptics';
@@ -91,9 +91,22 @@ export function MatchCenter({ leagueId, matchId }: { leagueId: string; matchId: 
     };
   }, [leagueId, matchId, summaryStatus]);
 
-  const pb = usePlayback(match, league.serverNow);
+  // demo: single player, so the match can be watched faster than the live clock
+  const free = isLocalLeague(leagueId);
+  const pb = usePlayback(match, league.serverNow, free);
   const shown = useMemo(() => (match ? match.events.filter((e) => e.t <= pb.pos) : []), [match, pb.pos]);
   const last = shown[shown.length - 1];
+
+  // …and once the final whistle is reached the round is published right away
+  const reachedEnd = free && match?.summary.status === 'live' && last?.type === 'fulltime';
+  const finishing = useRef(false);
+  useEffect(() => {
+    if (!reachedEnd || finishing.current || !league.isMaster) return;
+    finishing.current = true;
+    void league.run('round:finish', {}).catch(() => {
+      finishing.current = false;
+    });
+  }, [reachedEnd, league.isMaster]);
   const score = last ? [last.homeGoals, last.awayGoals] : [0, 0];
   const ended = !!match && match.summary.status === 'finished' && shown.some((e) => e.type === 'fulltime');
 

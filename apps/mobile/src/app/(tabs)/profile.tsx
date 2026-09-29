@@ -6,6 +6,7 @@ import { toast } from '@/lib/store/toasts';
 import { sfx } from '@/lib/sfx';
 import { AVATARS } from '@/lib/format';
 import { C, R, S, T } from '@/lib/theme';
+import { ONLINE_ENABLED } from '@/lib/features';
 
 export default function Profile() {
   const s = useSession();
@@ -63,6 +64,7 @@ export default function Profile() {
         </Card>
       </Section>
 
+      {ONLINE_ENABLED ? (
       <Section title="Gioco online">
         <Card>
           <Row style={{ justifyContent: 'space-between', marginBottom: S.md }}>
@@ -83,6 +85,7 @@ export default function Profile() {
           )}
         </Card>
       </Section>
+      ) : null}
 
       <Section title="Preferenze">
         <Card>

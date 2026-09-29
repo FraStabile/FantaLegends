@@ -6,6 +6,7 @@ import { localClient, remoteClient, useSession } from '@/lib/store/session';
 import { updateRemoteProfile } from '@/lib/net/remoteClient';
 import { toast } from '@/lib/store/toasts';
 import { haptic } from '@/lib/haptics';
+import { ONLINE_ENABLED } from '@/lib/features';
 
 if (Platform.OS !== 'web') {
   Notifications.setNotificationHandler({
@@ -35,7 +36,7 @@ export function NotificationBridge() {
   }, [remote, displayName]);
 
   useEffect(() => {
-    if (!remote || Platform.OS === 'web') return;
+    if (!ONLINE_ENABLED || !remote || Platform.OS === 'web') return;
     void (async () => {
       try {
         const { status } = await Notifications.requestPermissionsAsync();

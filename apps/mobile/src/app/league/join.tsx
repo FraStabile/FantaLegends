@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
+import { ONLINE_ENABLED } from '@/lib/features';
 import { C, R, S, T } from '@/lib/theme';
 import { remoteClient, useSession } from '@/lib/store/session';
 import { toast } from '@/lib/store/toasts';
@@ -12,7 +13,12 @@ import { parseInviteCode, statusInfo } from '@/components/league/labels';
 
 const clean = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
 
-export default function JoinLeagueScreen() {
+/** Online play is work in progress: without the flag the screen is not reachable. */
+export default function JoinLeagueRoute() {
+  return ONLINE_ENABLED ? <JoinLeagueScreen /> : <Redirect href="/" />;
+}
+
+function JoinLeagueScreen() {
   const params = useLocalSearchParams<{ code?: string }>();
   const remote = useSession((s) => s.remote);
   const [code, setCode] = useState(() => (params.code ? parseInviteCode(String(params.code)) ?? clean(String(params.code)) : ''));

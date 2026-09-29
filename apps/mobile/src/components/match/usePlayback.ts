@@ -24,20 +24,25 @@ export interface Playback {
  * Live: the server reveals events on a shared clock (kickoff + liveMs). The user
  * can pause, then catch up faster, but never beyond the live edge (no spoilers).
  * Finished: free replay at 1×–10×.
+ * `free` (single-player demo): the client has the whole timeline, so a live match
+ * starts at the live position but can then be watched at any speed.
  */
-export function usePlayback(match: MatchView | null, serverNow: () => number): Playback {
+export function usePlayback(match: MatchView | null, serverNow: () => number, free = false): Playback {
   const [pos, setPos] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [speed, setSpeed] = useState<Speed>(1);
   const [atLive, setAtLive] = useState(true);
   const initialised = useRef<string | null>(null);
-  const ref = useRef({ match, playing, speed, atLive });
-  ref.current = { match, playing, speed, atLive };
+  const ref = useRef({ match, playing, speed, atLive, free });
+  ref.current = { match, playing, speed, atLive, free };
 
-  const liveEdgeOf = (m: MatchView | null): number | null => {
+  /** shared live clock position, used to join a live match where everybody is */
+  const sharedEdgeOf = (m: MatchView | null): number | null => {
     if (!m || m.summary.status !== 'live' || m.summary.kickoffAt === null) return null;
     return Math.max(0, Math.min(m.totalTime, ((serverNow() - m.summary.kickoffAt) / m.liveMs) * m.totalTime));
   };
+  /** the position playback may not pass (null = no limit) */
+  const liveEdgeOf = (m: MatchView | null): number | null => (ref.current.free ? null : sharedEdgeOf(m));
 
   // first load: live → join the live edge; finished → start from the end (recap), replay on demand
   useEffect(() => {
@@ -48,8 +53,8 @@ export function usePlayback(match: MatchView | null, serverNow: () => number): P
       setPlaying(false);
       setAtLive(false);
     } else {
-      setPos(liveEdgeOf(match) ?? 0);
-      setAtLive(true);
+      setPos(sharedEdgeOf(match) ?? 0);
+      setAtLive(!free);
     }
   }, [match]);
 

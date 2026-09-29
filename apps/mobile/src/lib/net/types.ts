@@ -30,6 +30,8 @@ export interface LeagueSummary {
   season: number;
   members: number;
   updatedAt: number;
+  /** season over and the viewer's team is the champion (demo leagues) */
+  won?: boolean;
 }
 
 export interface GenerationPreview {
@@ -64,6 +66,8 @@ export interface CommandMap {
   'auction:resume': Record<string, never>;
   'season:start': Record<string, never>;
   'round:play': { mode: 'live' | 'instant' };
+  /** demo only: publish the live round once the Master has watched it to the end */
+  'round:finish': Record<string, never>;
   'match:talk': { matchId: string; phrase: TalkPhrase; tone: TalkTone };
   'season:new': Record<string, never>;
   'feed:react': { feedId: string; emoji: string };

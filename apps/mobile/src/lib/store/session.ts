@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 import { LocalClient } from '../net/localClient';
 import { RemoteClient, registerGuest, updateRemoteProfile } from '../net/remoteClient';
 import type { GameClient } from '../net/types';
+import { ONLINE_ENABLED } from '../features';
 
 /** Default backend: explicit build-time URL, else the host that served the web app, else the dev machine. */
 function defaultServerUrl(): string {
@@ -31,6 +32,8 @@ interface SessionState {
   soundEnabled: boolean;
   /** matches whose team talk the user chose to skip (recent ones only) */
   skippedTalks: string[];
+  /** league id → challenge id, for the challenges started from the home screen */
+  challengeRuns: Record<string, string>;
   setProfile(displayName: string, avatar: string): Promise<void>;
   connectServer(serverUrl: string): Promise<void>;
   disconnectServer(): void;
@@ -38,6 +41,7 @@ interface SessionState {
   setHaptics(on: boolean): void;
   setSound(on: boolean): void;
   skipTalk(matchId: string): void;
+  recordChallenge(leagueId: string, challengeId: string): void;
 }
 
 export const useSession = create<SessionState>()(
@@ -53,6 +57,7 @@ export const useSession = create<SessionState>()(
       hapticsEnabled: true,
       soundEnabled: true,
       skippedTalks: [],
+      challengeRuns: {},
       async setProfile(displayName, avatar) {
         set({ displayName, avatar });
         const r = get().remote;
@@ -77,6 +82,9 @@ export const useSession = create<SessionState>()(
       },
       setSound(on) {
         set({ soundEnabled: on });
+      },
+      recordChallenge(leagueId, challengeId) {
+        set({ challengeRuns: { ...get().challengeRuns, [leagueId]: challengeId } });
       },
       skipTalk(matchId) {
         set({ skippedTalks: [...get().skippedTalks.filter((id) => id !== matchId), matchId].slice(-30) });
@@ -114,7 +122,8 @@ export function localClient(): LocalClient {
 
 export function remoteClient(): RemoteClient | null {
   const r = useSession.getState().remote;
-  if (!r) return null;
+  // online play is hidden while in progress: a stored session is simply ignored
+  if (!r || !ONLINE_ENABLED) return null;
   if (!remote) remote = new RemoteClient(r.serverUrl, r.token, r.userId);
   return remote;
 }

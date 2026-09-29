@@ -175,7 +175,7 @@ export function liveTimeAt(summary: MatchSummary, result: MatchResult, liveMs: n
  * Anti-spoiler projection: while a match is live only the events that already
  * "happened" on the shared clock are sent; stats and ratings come at full time.
  */
-export function projectMatch(league: League, summary: MatchSummary, result: MatchResult | undefined, now: number): MatchView {
+export function projectMatch(league: League, summary: MatchSummary, result: MatchResult | undefined, now: number, opts: { revealAll?: boolean } = {}): MatchView {
   const info = (id: string): MatchTeamInfo => {
     const t = league.teams.find((x) => x.id === id)!;
     return { id, name: t.name, logo: t.logo, ownerName: league.members.find((m) => m.userId === t.ownerId)?.displayName ?? '—' };
@@ -183,7 +183,7 @@ export function projectMatch(league: League, summary: MatchSummary, result: Matc
   const liveMs = league.config.liveMatchSeconds * 1000;
   const liveTime = result ? liveTimeAt(summary, result, liveMs, now) : null;
   const finished = summary.status === 'finished';
-  const events = !result ? [] : finished ? result.events : liveTime === null ? [] : result.events.filter((e) => e.t <= liveTime);
+  const events = !result ? [] : finished || (opts.revealAll && summary.status === 'live') ? result.events : liveTime === null ? [] : result.events.filter((e) => e.t <= liveTime);
   const players: MatchView['players'] = {};
   if (result) {
     for (const lu of [result.lineups.home, result.lineups.away]) for (const p of lu.players) players[p.playerId] = { name: p.name, position: p.position, overall: p.overall };

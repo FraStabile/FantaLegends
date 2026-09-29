@@ -114,10 +114,14 @@ export class LeagueHost {
     return this.league.members.find((m) => m.userId === userId)?.teamId ?? null;
   }
 
-  matchView(matchId: string): MatchView {
+  /**
+   * `revealAll`: the whole timeline of a live match (single-player demo, where the
+   * viewer may watch faster than the shared clock); never used for online leagues.
+   */
+  matchView(matchId: string, opts: { revealAll?: boolean } = {}): MatchView {
     const m = this.league.tournament?.matches.find((x) => x.id === matchId);
     if (!m) throw new DomainError('NOT_FOUND');
-    return projectMatch(this.league, m, this.results.get(matchId), this.now());
+    return projectMatch(this.league, m, this.results.get(matchId), this.now(), opts);
   }
 
   statistics(): SeasonStatistics {
@@ -245,6 +249,13 @@ export class LeagueHost {
       return [];
     });
     return talk!;
+  }
+
+  /** Publish the live round now (the Master watched it to the end faster than the shared clock). */
+  finishLiveRound(userId: string): void {
+    this.requireMaster(userId);
+    if (!this.league.tournament?.matches.some((m) => m.status === 'live')) return;
+    this.run(() => this.finishLiveMatches());
   }
 
   newSeason(userId: string): void {

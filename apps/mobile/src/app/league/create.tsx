@@ -9,13 +9,14 @@ import { haptic } from '@/lib/haptics';
 import { getRandomBots } from '@/lib/demo';
 import { Button, Card, Header, Row, Screen, Section, TeamBadge, TextField } from '@/components/ui';
 import { LeagueConfigForm, validateConfig } from '@/components/league/LeagueConfigForm';
+import { ONLINE_ENABLED } from '@/lib/features';
 
 type Mode = 'online' | 'demo';
 
 export default function CreateLeagueScreen() {
   const remote = useSession((s) => s.remote);
   const displayName = useSession((s) => s.displayName);
-  const onlineAvailable = !!remote;
+  const onlineAvailable = ONLINE_ENABLED && !!remote;
 
   const [config, setConfig] = useState<LeagueConfig>({ ...DEFAULT_CONFIG, name: displayName ? `Lega di ${displayName}`.slice(0, 40) : DEFAULT_CONFIG.name });
   const [teamName, setTeamName] = useState('');
@@ -61,6 +62,7 @@ export default function CreateLeagueScreen() {
       </Row>
       <Header kicker="Nuova sfida" title="CREA LEGA" subtitle="Tu sei il Master: decidi tu le regole." />
 
+      {ONLINE_ENABLED ? (
       <Section title="Modalità">
         <View style={{ gap: S.sm }}>
           <ModeCard
@@ -80,6 +82,7 @@ export default function CreateLeagueScreen() {
           />
         </View>
       </Section>
+      ) : null}
 
       <Section title="La tua squadra">
         <Card>
@@ -122,7 +125,7 @@ export default function CreateLeagueScreen() {
       <LeagueConfigForm value={config} onChange={setConfig} />
 
       <Button
-        label={effectiveMode === 'online' ? 'CREA LEGA ONLINE' : 'CREA LEGA DEMO'}
+        label={effectiveMode === 'online' ? 'CREA LEGA ONLINE' : ONLINE_ENABLED ? 'CREA LEGA DEMO' : 'CREA LEGA'}
         icon="🏆"
         variant="gold"
         loading={busy}
