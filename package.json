@@ -1,0 +1,14 @@
+{
+  "name": "asta-legends",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": ["packages/*", "apps/*"],
+  "scripts": {
+    "test": "npm run test -w @asta/core && npm run test -w @asta/server",
+    "typecheck": "npm run typecheck -w @asta/core && npm run typecheck -w @asta/server && npm run typecheck -w mobile",
+    "server": "npm run dev -w @asta/server",
+    "mobile": "npm run start -w mobile",
+    "web": "npm run web -w mobile"
+  },
+  "engines": { "node": ">=22.13" }
+}

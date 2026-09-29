@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button, Card, Pill, Row, Screen, Section, SwitchRow, TextField, Header } from '@/components/ui';
 import { useSession } from '@/lib/store/session';
 import { toast } from '@/lib/store/toasts';
+import { sfx } from '@/lib/sfx';
 import { AVATARS } from '@/lib/format';
 import { C, R, S, T } from '@/lib/theme';
 
@@ -86,6 +87,15 @@ export default function Profile() {
       <Section title="Preferenze">
         <Card>
           <SwitchRow label="Feedback aptico" hint="Vibrazioni per rilanci, gol e aste vinte" value={s.hapticsEnabled} onChange={s.setHaptics} />
+          <SwitchRow
+            label="Effetti sonori"
+            hint="Martelletto, rilanci, fischi e boato del gol"
+            value={s.soundEnabled}
+            onChange={(on) => {
+              s.setSound(on);
+              if (!on) sfx.stopAll();
+            }}
+          />
         </Card>
       </Section>
 

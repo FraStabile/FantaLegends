@@ -28,11 +28,16 @@ interface SessionState {
   remote: RemoteSession | null;
   activeLeagueId: string | null;
   hapticsEnabled: boolean;
+  soundEnabled: boolean;
+  /** matches whose team talk the user chose to skip (recent ones only) */
+  skippedTalks: string[];
   setProfile(displayName: string, avatar: string): Promise<void>;
   connectServer(serverUrl: string): Promise<void>;
   disconnectServer(): void;
   setActiveLeague(id: string | null): void;
   setHaptics(on: boolean): void;
+  setSound(on: boolean): void;
+  skipTalk(matchId: string): void;
 }
 
 export const useSession = create<SessionState>()(
@@ -46,6 +51,8 @@ export const useSession = create<SessionState>()(
       remote: null,
       activeLeagueId: null,
       hapticsEnabled: true,
+      soundEnabled: true,
+      skippedTalks: [],
       async setProfile(displayName, avatar) {
         set({ displayName, avatar });
         const r = get().remote;
@@ -67,6 +74,12 @@ export const useSession = create<SessionState>()(
       },
       setHaptics(on) {
         set({ hapticsEnabled: on });
+      },
+      setSound(on) {
+        set({ soundEnabled: on });
+      },
+      skipTalk(matchId) {
+        set({ skippedTalks: [...get().skippedTalks.filter((id) => id !== matchId), matchId].slice(-30) });
       },
     }),
     {
